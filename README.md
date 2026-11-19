@@ -10,6 +10,17 @@
 - 看板娘是**峰哥本人的 Live2D 模型**（真 `.moc3`，26 个部件、34 个参数、24 组动作）
 - 两种形态：本地全功能（FastAPI + 就地播放 + LLM 复核）、纯静态（19.5 MB，浏览器里检索，B 站内嵌播放）
 
+## 下载
+
+| 内容 | 地址 |
+|---|---|
+| 源码仓库 | https://github.com/lidongze1002/fengge-qa |
+| **完整版**（源码 + 数据集 + 模型 + 站点 + 状态库） | [fengge-qa-full.zip](https://github.com/lidongze1002/fengge-qa/releases/download/v1.0.0/fengge-qa-full.zip)（22.5 MB） |
+| **纯站点**（解压即用 / 拖进 Cloudflare Pages） | [fengge-qa-site.zip](https://github.com/lidongze1002/fengge-qa/releases/download/v1.0.0/fengge-qa-site.zip)（14.7 MB） |
+
+不含视频原片（18.5 GB，版权归 B 站/主播所有）与本地模型权重（whisper、See-Through）。
+
+
 ---
 
 ## 一眼看懂架构
