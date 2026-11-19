@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>峰哥解答世间万物</title>
+<meta name="description" content="从峰哥亡命天涯的直播切片里检索他真正回答过的问题，点开跳到 B 站原视频那一刻。">
+<style>
+  :root{
+    --bg:#f5f6f8; --panel:rgba(255,255,255,.72); --line:rgba(20,24,34,.10);
+    --text:#1f2329; --muted:#626b7a; --muted-2:#8b93a1;
+    --pink:#e8658d; --blue:#2f9fd0; --gold:#b8860b;
+  }
+  *{box-sizing:border-box}
+  html{background:#f5f6f8}
+  body{
+    margin:0;color:var(--text);
+    font:14px/1.6 "PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .bg{
+    position:fixed;inset:-20%;z-index:-2;pointer-events:none;
+    background:
+      radial-gradient(44% 46% at 16% 10%, rgba(232,101,141,.26), transparent 66%),
+      radial-gradient(40% 42% at 84% 16%, rgba(47,159,208,.24), transparent 68%),
+      radial-gradient(46% 46% at 50% 96%, rgba(255,196,120,.22), transparent 70%);
+    filter:blur(8px);
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:56px 20px 140px}
+  header h1{
+    font-size:clamp(24px,4vw,34px);margin:0 0 10px;letter-spacing:-.5px;
+    background:linear-gradient(96deg,#1f2329 30%,#e8658d 70%,#2f9fd0);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  header p{margin:0;color:var(--muted);font-size:13.5px}
+  .search{
+    margin:26px 0 8px;display:flex;gap:10px;
+  }
+  .search input{
+    flex:1;padding:13px 16px;border-radius:14px;font-size:15px;
+    border:1px solid rgba(255,255,255,.9);background:rgba(255,255,255,.78);
+    box-shadow:0 10px 30px rgba(38,48,84,.08);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    outline:none;color:var(--text);
+  }
+  .search input:focus{border-color:rgba(232,101,141,.55)}
+  .search button{
+    padding:0 22px;border-radius:14px;font-size:14px;cursor:pointer;
+    border:1px solid rgba(232,101,141,.45);color:#fff;
+    background:linear-gradient(120deg,#e8658d,#d9537b);
+    box-shadow:0 10px 26px rgba(232,101,141,.28);
+  }
+  .search button:disabled{opacity:.6;cursor:default}
+  .hint{color:var(--muted-2);font-size:12.5px;margin-bottom:26px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px}
+  .chips button{
+    padding:5px 12px;border-radius:999px;font-size:12.5px;cursor:pointer;
+    border:1px solid rgba(255,255,255,.9);background:rgba(255,255,255,.7);
+    color:var(--muted);
+  }
+  .chips button:hover{color:var(--pink);border-color:rgba(232,101,141,.45)}
+  .empty{
+    padding:34px;text-align:center;color:var(--muted);border-radius:18px;
+    border:1px dashed rgba(20,24,34,.14);background:rgba(255,255,255,.55);
+  }
+  /* 最相关那一条就地播放 */
+  .player{
+    margin:0 0 18px;border-radius:16px;overflow:hidden;
+    border:1px solid rgba(255,255,255,.9);background:rgba(255,255,255,.7);
+    box-shadow:0 12px 34px rgba(38,48,84,.1);
+    -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+  }
+  .player-head{
+    display:flex;align-items:center;gap:8px;padding:10px 14px;
+    font-size:13px;color:var(--muted);border-bottom:1px solid rgba(20,24,34,.06);
+  }
+  .player-head b{color:var(--text);font-weight:600;min-width:0;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .player-head a{margin-left:auto;color:var(--blue);text-decoration:none;font-size:12.5px;white-space:nowrap}
+  .player-box{position:relative;width:100%;padding-top:56.25%;background:#0b0d12}
+  .player-box iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .card{
+    display:flex;gap:14px;padding:14px;border-radius:16px;margin-bottom:12px;
+    border:1px solid rgba(255,255,255,.9);background:var(--panel);
+    -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+    box-shadow:0 10px 30px rgba(38,48,84,.07);
+    animation:rise .3s cubic-bezier(.2,.7,.3,1) both;
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .card img{
+    width:128px;height:80px;object-fit:cover;border-radius:10px;flex:none;
+    background:rgba(20,24,34,.06);
+  }
+  .card .body{min-width:0;flex:1}
+  .card h3{margin:0 0 6px;font-size:15px;line-height:1.45}
+  .card .ans{margin:0 0 8px;color:var(--muted);font-size:13px;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .card .meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;color:var(--muted-2)}
+  .card .tag{padding:2px 8px;border-radius:999px;background:rgba(47,159,208,.1);color:#2f7fa0}
+  .card a{
+    margin-left:auto;padding:5px 13px;border-radius:999px;font-size:12.5px;
+    color:#fff;text-decoration:none;background:linear-gradient(120deg,#2f9fd0,#2f8fd0);
+    white-space:nowrap;
+  }
+  .card a:hover{filter:brightness(1.06)}
+  footer{
+    margin-top:44px;padding-top:18px;border-top:1px solid var(--line);
+    color:var(--muted-2);font-size:12px;line-height:1.8;
+  }
+  footer a{color:var(--muted)}
+  #mascot{position:fixed;right:6px;bottom:0;width:170px;z-index:20;pointer-events:none}
+  #mascot canvas{display:block;width:100% !important;height:auto !important}
+  @media(max-width:760px){
+    .card img{width:92px;height:62px}
+    #mascot{display:none}
+    .wrap{padding:34px 14px 90px}
+  }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="wrap">
+  <header>
+    <h1>峰哥解答世间万物</h1>
+    <p>从 <b>峰哥亡命天涯</b> 的直播切片里，检索他真正回答过的问题。点「看原话」直接跳到 B 站那一刻。</p>
+  </header>
+
+  <div class="search">
+    <input id="q" placeholder="问点什么，比如：我在深圳送外卖，25 岁还有救吗" autocomplete="off">
+    <button id="go">翻一翻</button>
+  </div>
+  <div class="hint" id="hint">共 <span id="total">0</span> 条问答 · 纯前端检索，不需要联网调用任何模型</div>
+
+  <div class="chips" id="chips"></div>
+
+  <section class="player" id="player" hidden>
+    <div class="player-head">
+      <b id="ptitle">—</b><span id="ptime"></span>
+      <a id="plink" href="#" target="_blank" rel="noopener">在 B 站打开 ↗</a>
+    </div>
+    <div class="player-box">
+      <iframe id="pframe" allowfullscreen scrolling="no" frameborder="0" loading="lazy"></iframe>
+    </div>
+  </section>
+
+  <div id="out"></div>
+
+  <footer>
+    <div>视频与直播内容版权归 B 站 UP 主「卡秃噜皮君」及主播「峰哥亡命天涯」所有，本站只做检索与学习研究，不二次分发原片、不用于商业用途。</div>
+    <div>索引与文字由程序自动生成（语音识别 + 模型抽取），可能有误差，一切以原视频为准。如有侵权请联系删除。</div>
+  </footer>
+</div>
+
+<div id="mascot"></div>
+
+<script>
+const PRESETS = [
+  "我在深圳送外卖，25 岁还有救吗",
+  "吃拼好饭是不是三低",
+  "读大学到底有没有用",
+  "怎么追女生",
+  "缺钱的时候该怎么办"
+];
+
+const state = { docs: [], postings: null, df: null, dl: 0, avgdl: 0 };
+
+function bigrams(s) {
+  const t = (s || "").toLowerCase().replace(/[^\u4e00-\u9fa5a-z0-9]+/g, "");
+  const out = [];
+  for (let i = 0; i < t.length - 1; i++) out.push(t.slice(i, i + 2));
+  if (t.length === 1) out.push(t);
+  return out;
+}
+
+function buildIndex(docs) {
+  const postings = Object.create(null);
+  const df = Object.create(null);
+  let totalLen = 0;
+  docs.forEach((d, i) => {
+    const text = [d.q, d.qv, d.a, d.quote, (d.tags || []).join(" ")].join(" ");
+    const grams = bigrams(text);
+    totalLen += grams.length;
+    const seen = new Set();
+    for (const g of grams) {
+      (postings[g] || (postings[g] = [])).push(i);
+      if (!seen.has(g)) { seen.add(g); df[g] = (df[g] || 0) + 1; }
+    }
+    d._len = grams.length;
+  });
+  state.postings = postings;
+  state.df = df;
+  state.dl = docs.length;
+  state.avgdl = totalLen / Math.max(1, docs.length);
+}
+
+function search(query, topK = 12) {
+  const grams = bigrams(query);
+  if (!grams.length) return [];
+  const k1 = 1.4, b = 0.72;
+  const scores = new Map();
+  for (const g of grams) {
+    const list = state.postings[g];
+    if (!list) continue;
+    const idf = Math.log(1 + (state.dl - state.df[g] + 0.5) / (state.df[g] + 0.5));
+    for (const i of list) {
+      const d = state.docs[i];
+      const tf = 1;
+      const s = idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * d._len / state.avgdl));
+      scores.set(i, (scores.get(i) || 0) + s);
+    }
+  }
+  return [...scores.entries()]
+    .sort((a, b2) => b2[1] - a[1])
+    .slice(0, topK)
+    .map(([i, s]) => ({ ...state.docs[i], _score: s }));
+}
+
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+}
+
+function fmtTime(t) {
+  const s = Math.max(0, Math.round(t || 0));
+  const m = Math.floor(s / 60), r = s % 60;
+  const h = Math.floor(m / 60);
+  return h ? `${h}:${String(m % 60).padStart(2, "0")}:${String(r).padStart(2, "0")}`
+           : `${m}:${String(r).padStart(2, "0")}`;
+}
+
+function card(d, i) {
+  const url = `https://www.bilibili.com/video/${encodeURIComponent(d.b)}?t=${Math.round(d.t || 0)}`;
+  const tags = (d.tags || []).slice(0, 3).map(t => `<span class="tag">${esc(t)}</span>`).join("");
+  return `<div class="card" data-i="${i}" title="点击在页面里播放">
+    <img loading="lazy" src="thumbs/${encodeURIComponent(d.id)}.jpg" alt="" onerror="this.style.visibility='hidden'">
+    <div class="body">
+      <h3>${esc(d.q || d.qv)}</h3>
+      <p class="ans">${esc(d.a || d.quote)}</p>
+      <div class="meta">
+        ${tags}
+        <span>${esc(d.title).slice(0, 26)}</span>
+        <span>${fmtTime(d.t)}</span>
+        <a href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">看原话 ↗</a>
+      </div>
+    </div>
+  </div>`;
+}
+
+// 在页面里内嵌 B 站播放器，定位到对应时间点
+function playInline(d) {
+  if (!d || !d.b) return;
+  const sec = document.getElementById("player");
+  sec.hidden = false;
+  document.getElementById("ptitle").textContent = d.q || d.qv || "峰哥的回答";
+  document.getElementById("ptime").textContent = "· " + fmtTime(d.t);
+  document.getElementById("plink").href =
+    `https://www.bilibili.com/video/${encodeURIComponent(d.b)}?t=${Math.round(d.t || 0)}`;
+  document.getElementById("pframe").src =
+    `https://player.bilibili.com/player.html?bvid=${encodeURIComponent(d.b)}` +
+    `&page=1&t=${Math.round(d.t || 0)}&autoplay=0&danmaku=0&high_quality=1`;
+}
+
+function render(list, query) {
+  const out = document.getElementById("out");
+  state.last = list;
+  if (!list.length) {
+    document.getElementById("player").hidden = true;
+    out.innerHTML = `<div class="empty">这个峰哥没聊过，或者换个问法试试。</div>`;
+    return;
+  }
+  out.innerHTML = list.map((d, i) => card(d, i)).join("");
+  playInline(list[0]);
+}
+
+
+function ask(q) {
+  const query = (q || "").trim();
+  if (!query) return;
+  document.getElementById("q").value = query;
+  render(search(query), query);
+}
+
+// ---------- 看板娘 ----------
+async function initMascot() {
+  const host = document.getElementById("mascot");
+  if (!host || !window.matchMedia("(min-width: 761px)").matches) return;
+  const load = (src) => new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.body.appendChild(s);
+  });
+  try {
+    await load("vendor/live2d/cubism/pixi.min.js");
+    await load("vendor/live2d/cubism/live2dcubismcore.min.js");
+    await load("vendor/live2d/cubism/pixi-live2d-display.min.js");
+    const W = 170, H = 196;
+    const app = new PIXI.Application({
+      backgroundAlpha: 0, antialias: true, width: W, height: H,
+      resolution: Math.min(window.devicePixelRatio || 1, 2),
+      autoStart: true, sharedTicker: true
+    });
+    host.appendChild(app.view);
+    const model = await PIXI.live2d.Live2DModel.from(
+      "vendor/live2d/models/fengge/fengge.model3.json", { autoInteract: true }
+    );
+    app.stage.addChild(model);
+    model.anchor.set(0.5, 1);
+    const s = Math.min(W / model.internalModel.width, H / model.internalModel.height);
+    model.scale.set(s);
+    model.position.set(W / 2, H);
+    // 头是刚性平板，转头幅度大了下巴会和脖子分家
+    const im = model.internalModel;
+    const origFocus = im.updateFocus.bind(im);
+    im.updateFocus = function () {
+      const f = this.focusController;
+      const ox = f.x, oy = f.y;
+      f.x = ox * 0.4; f.y = oy * 0.4;
+      try { origFocus(); } finally { f.x = ox; f.y = oy; }
+    };
+    model.autoUpdate = false;
+    let last = performance.now();
+    app.ticker.add(() => {
+      const now = performance.now();
+      last = now;
+      try { model.update(app.ticker.deltaMS); } catch (e) {}
+    });
+    setInterval(() => {
+      if (document.hidden) { last = performance.now(); return; }
+      const now = performance.now();
+      if (now - last < 250) return;
+      const dt = Math.min(now - last, 120);
+      last = now;
+      try { model.update(dt); app.render(); } catch (e) {}
+    }, 66);
+    try { model.motion("Idle"); } catch (e) {}
+  } catch (e) {
+    console.warn("[live2d]", e);
+  }
+}
+
+// ---------- 启动 ----------
+(async function boot() {
+  const chips = document.getElementById("chips");
+  chips.innerHTML = PRESETS.map(p => `<button data-q="${esc(p)}">${esc(p)}</button>`).join("");
+  chips.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-q]");
+    if (b) ask(b.dataset.q);
+  });
+  document.getElementById("go").onclick = () => ask(document.getElementById("q").value);
+  document.getElementById("q").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") ask(document.getElementById("q").value);
+  });
+  document.getElementById("out").addEventListener("click", (e) => {
+    const el = e.target.closest(".card");
+    if (!el) return;
+    const d = state.last[Number(el.dataset.i)];
+    if (!d) return;
+    playInline(d);
+    document.getElementById("player").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  initMascot();
+
+  try {
+    const res = await fetch("data/clips.json");
+    state.docs = await res.json();
+  } catch (e) {
+    document.getElementById("hint").textContent = "数据加载失败：" + e.message;
+    return;
+  }
+  document.getElementById("total").textContent = state.docs.length;
+  buildIndex(state.docs);
+
+  const initial = new URLSearchParams(location.search).get("q");
+  if (initial) ask(initial);
+})();
+</script>
+</body>
+</html>

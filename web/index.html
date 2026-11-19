@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>峰哥解答世间万物 · 直播切片检索</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --panel:rgba(255,255,255,.72); --panel-2:rgba(255,255,255,.55);
+    --line:rgba(20,24,34,.10);
+    --text:#1f2329; --muted:#626b7a; --muted-2:#8b93a1;
+    --pink:#e8658d; --blue:#2f9fd0; --gold:#b8860b;
+  }
+  *{box-sizing:border-box}
+  html{background:#f5f6f8}
+  body{
+    background:transparent; color:var(--text);
+    font:14px/1.6 "PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  /* 背景：两团柔光 + 细网格 + 少量粒子 */
+  .bg-aurora{
+    position:fixed;inset:-20%;z-index:-3;pointer-events:none;
+    background:
+      radial-gradient(44% 46% at 16% 10%, rgba(232,101,141,.26), transparent 66%),
+      radial-gradient(40% 42% at 84% 6%, rgba(47,159,208,.20), transparent 68%),
+      radial-gradient(48% 50% at 70% 94%, rgba(255,196,120,.18), transparent 66%);
+    filter:blur(70px);
+    animation:aurora 34s ease-in-out infinite alternate;
+  }
+  @keyframes aurora{
+    0%{transform:translate3d(0,0,0) scale(1)}
+    100%{transform:translate3d(-2%,1.5%,0) scale(1.05)}
+  }
+  .bg-grid{
+    position:fixed;inset:0;z-index:-2;pointer-events:none;opacity:.55;
+    background-image:
+      linear-gradient(rgba(30,36,58,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30,36,58,.04) 1px, transparent 1px);
+    background-size:68px 68px;
+    -webkit-mask-image:radial-gradient(circle at 50% 24%, #000 28%, transparent 74%);
+    mask-image:radial-gradient(circle at 50% 24%, #000 28%, transparent 74%);
+  }
+  #fx{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.55}
+
+  /* 毛玻璃 */
+  .ask,.info,.comments,.item,.empty,.player,.rel button,.seg,.ch{
+    background:linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,255,255,.56));
+    -webkit-backdrop-filter:blur(24px) saturate(1.7);
+    backdrop-filter:blur(24px) saturate(1.7);
+    border:1px solid rgba(255,255,255,.9);
+    box-shadow:0 18px 46px rgba(38,48,84,.12), inset 0 1px 0 rgba(255,255,255,.95);
+  }
+  .ask{box-shadow:0 26px 70px rgba(38,48,84,.16), inset 0 1px 0 rgba(255,255,255,.95)}
+  .topbar{
+    background:rgba(255,255,255,.62) !important;
+    -webkit-backdrop-filter:blur(26px) saturate(1.7);
+    backdrop-filter:blur(26px) saturate(1.7);
+    border-bottom:1px solid rgba(255,255,255,.9);
+    box-shadow:0 10px 30px rgba(38,48,84,.08);
+  }
+  .item:hover{transform:translateY(-2px); border-color:rgba(251,114,153,.55)}
+  .item,.rel button,.ch,.seg,.tool{transition:transform .16s ease, background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease}
+  #result > *{animation:rise .34s cubic-bezier(.2,.7,.3,1) both}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  /* 看板娘（Live2D canvas 由 L2Dwidget 注入，气泡单独定位） */
+  .mascot{
+    position:fixed;right:16px;bottom:12px;z-index:31;
+    display:flex;flex-direction:column;align-items:flex-end;gap:4px;
+    pointer-events:none;max-width:calc(100vw - 32px);
+  }
+  .mascot-img{
+    width:158px;height:auto;display:block;
+    mix-blend-mode:multiply;
+    filter:drop-shadow(0 10px 18px rgba(40,50,80,.16));
+    animation:bob 4.6s ease-in-out infinite;
+    transform-origin:50% 92%;
+  }
+  @keyframes bob{
+    0%,100%{transform:translateY(0) rotate(-0.6deg)}
+    50%{transform:translateY(-6px) rotate(0.8deg)}
+  }
+  body.l2d .mascot{bottom:266px}
+  body.cubism4 .mascot{bottom:200px}
+  /* Cubism 3/4 模型（.model3.json）用 pixi 渲染，画布自己建 */
+  #live2d-cubism{
+    position:fixed;right:0;bottom:0;z-index:30;pointer-events:none;
+    width:186px;height:196px;
+  }
+  #l2d-switch{
+    position:fixed;right:182px;bottom:8px;z-index:32;
+    padding:4px 10px;border-radius:999px;font-size:11.5px;
+    color:var(--muted);background:rgba(255,255,255,.78);
+    border:1px solid rgba(255,255,255,.9);
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    box-shadow:0 6px 18px rgba(38,48,84,.12);
+  }
+  #l2d-switch:hover{color:var(--pink);border-color:rgba(232,101,141,.5)}
+  @media(max-width:560px){#l2d-switch{display:none}}
+  #live2dcanvas{
+    position:fixed !important;
+    left:auto !important; top:auto !important;
+    right:0 !important; bottom:0 !important;
+    width:170px !important; height:260px !important;
+    z-index:30 !important;pointer-events:none;
+  }
+  #live2d-hint{
+    position:fixed;right:12px;bottom:6px;z-index:31;font-size:11px;color:var(--muted-2);
+    pointer-events:auto;cursor:pointer;opacity:.6;
+  }
+  #live2d-hint:hover{opacity:1;color:var(--pink)}
+  .bubble{
+    position:relative;margin-bottom:0;padding:9px 12px;border-radius:14px;
+    max-width:min(200px, 40vw);
+    font-size:12.5px;line-height:1.55;color:#333741;
+    background:rgba(255,255,255,.9);
+    border:1px solid rgba(255,255,255,.95);
+    -webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5);
+    box-shadow:0 14px 34px rgba(38,48,84,.14);
+    animation:bubbleIn .28s ease both;
+  }
+  .bubble::after{
+    content:"";position:absolute;right:38px;bottom:-6px;width:11px;height:11px;
+    background:rgba(255,255,255,.9);border-right:1px solid rgba(255,255,255,.95);
+    border-bottom:1px solid rgba(255,255,255,.95);transform:rotate(45deg);
+  }
+  @keyframes bubbleIn{from{opacity:0;transform:translateY(6px) scale(.96)}to{opacity:1;transform:none}}
+  /* 窄屏：整体缩小，气泡始终在头顶上方 */
+  @media(max-width:1180px){
+    .mascot-img{width:132px}
+    .bubble{max-width:min(180px, 44vw);font-size:12px}
+    .bubble::after{right:24px}
+  }
+  @media(max-width:760px){
+    .mascot-img{width:112px}
+    .bubble{max-width:min(150px, 42vw);padding:7px 10px;font-size:11.5px}
+  }
+  @media(max-width:560px){.mascot,#live2dcanvas,#live2d-cubism,#live2d-hint{display:none}}
+
+  @media (prefers-reduced-motion: reduce){
+    .bg-aurora,.mascot svg,#result > *{animation:none !important}
+  }
+  ::selection{background:rgba(251,114,153,.35)}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  button:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
+
+  /* 顶栏 */
+  .topbar{
+    position:sticky;top:0;z-index:10;background:rgba(23,24,26,.94);
+    border-bottom:1px solid var(--line);backdrop-filter:blur(8px);
+  }
+  .topbar-in{max-width:1180px;margin:0 auto;height:56px;padding:0 16px;display:flex;align-items:center;gap:14px}
+  .logo{
+    display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;letter-spacing:.2px;
+  }
+  .logo b{
+    width:26px;height:26px;border-radius:6px;background:var(--pink);color:#fff;
+    display:grid;place-items:center;font-size:14px;font-weight:800;
+  }
+  .logo span{color:var(--muted);font-weight:400;font-size:13px}
+  .topbar nav{margin-left:auto;display:flex;gap:18px;font-size:13px;color:var(--muted)}
+  .topbar nav a:hover{color:var(--text)}
+  .stat{color:var(--muted);font-size:12px;border-left:1px solid var(--line);padding-left:14px}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+
+  /* 提问 */
+  .ask{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px}
+  .ask-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .tag{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 6px}
+  .tag.pink{color:var(--pink);border-color:rgba(251,114,153,.45)}
+  .ask-row{display:flex;gap:8px}
+  textarea{
+    flex:1;min-height:44px;max-height:140px;resize:none;padding:10px 12px;
+    background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:6px;color:var(--text);
+    font:inherit;font-size:15px;line-height:1.5;outline:none;
+  }
+  textarea::placeholder{color:#9aa1af}
+  textarea:focus{border-color:var(--pink)}
+  #go{
+    padding:0 22px;border-radius:6px;background:var(--pink);color:#fff;font-weight:700;
+    font-size:15px;white-space:nowrap;
+  }
+  #go:hover{filter:brightness(1.06)}
+  #go:disabled{background:#4a3a41;color:#a08d94;cursor:progress}
+  .ask-foot{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted-2)}
+  .ask-foot b{color:var(--muted);font-weight:400}
+
+  /* 频道 */
+  .channels{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 0}
+  .ch{
+    font-size:13px;color:var(--muted);background:var(--panel);border:1px solid var(--line);
+    border-radius:4px;padding:4px 10px;
+  }
+  .ch:hover{color:var(--text);border-color:rgba(251,114,153,.55)}
+  .ch.on{color:#fff;background:var(--pink);border-color:var(--pink)}
+  .ch i{font-style:normal;opacity:.6;margin-left:4px;font-size:11px}
+
+  /* 结果布局 */
+  #result{margin-top:18px}
+  .cols{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:18px;align-items:start}
+  .cols > *{min-width:0}
+  @media(max-width:900px){
+    .cols{grid-template-columns:minmax(0,1fr)}
+    .player{max-width:380px;margin:0 auto}
+  }
+
+  .player{background:#000;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .player video{display:block;width:100%;aspect-ratio:9/16;max-height:70vh;object-fit:contain;background:#000}
+  .player-bar{
+    display:flex;justify-content:space-between;gap:8px;padding:7px 10px;font-size:12px;
+    color:var(--muted);border-top:1px solid var(--line);background:var(--panel);
+  }
+  .player-bar .t{font-variant-numeric:tabular-nums}
+  .player-bar button{color:var(--muted);font-size:12px}
+  .player-bar button:hover{color:var(--pink)}
+
+  .info{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px}
+  @media(min-width:901px){ .cols > div:first-child{position:sticky;top:72px} }
+  .info-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+  .up{display:flex;align-items:center;gap:6px;margin-right:auto}
+  .avatar{width:22px;height:22px;border-radius:50%;background:var(--pink);color:#fff;
+    display:grid;place-items:center;font-size:11px;font-weight:700}
+  .score{color:var(--gold);font-variant-numeric:tabular-nums}
+  .verdict{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 6px}
+
+  h1{font-size:18px;line-height:1.55;margin:10px 0 4px;font-weight:600}
+  .abstract{
+    margin:10px 0 14px;padding:9px 12px;background:rgba(10,167,224,.09);border-left:2px solid var(--blue);
+    border-radius:0 4px 4px 0;font-size:13px;color:#3f4b5c;
+  }
+  .abstract b{color:var(--blue);font-weight:600;margin-right:6px}
+
+  .answer{font-size:14.5px;line-height:1.85;color:#2b2e37;overflow-wrap:anywhere}
+  .quote{
+    margin-top:12px;padding:10px 12px;background:rgba(251,114,153,.10);border-radius:4px;
+    font-size:13.5px;line-height:1.7;color:#8e2f4d;
+  }
+  .quote::before{content:"“";color:var(--pink);font-size:18px;line-height:0;margin-right:2px}
+  .rows{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;font-size:12px;color:var(--muted-2)}
+  .rows a{color:var(--muted)}
+  .rows a:hover{color:var(--pink)}
+  .divider{height:1px;background:var(--line);margin:14px 0}
+
+  /* 相关片段 */
+  .rel{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+  .rel button{display:flex;gap:8px;align-items:center;flex:0 0 auto;width:208px;
+    background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:6px;text-align:left}
+  .rel button:hover{border-color:rgba(251,114,153,.55)}
+  .rel img{width:44px;height:60px;object-fit:cover;border-radius:4px;background:#000;flex:0 0 auto}
+  .rel .q{font-size:12px;line-height:1.45;color:#3d4250;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .rel .s{font-size:11px;color:var(--muted-2);margin-top:3px}
+  .rel .s em{font-style:normal;color:var(--gold)}
+
+  /* 话题浏览 */
+  .browse h2{font-size:15px;font-weight:600;margin:0 0 10px;color:var(--muted)}
+  .grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+  .item{
+    display:flex;gap:10px;background:var(--panel);border:1px solid var(--line);
+    border-radius:6px;padding:8px;text-align:left;width:100%;
+  }
+  .item:hover{border-color:rgba(251,114,153,.55);background:rgba(255,255,255,.92)}
+  .item img{width:54px;height:74px;object-fit:cover;border-radius:4px;background:#000;flex:0 0 auto}
+  .item .q{font-size:13px;line-height:1.5;color:#333846;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .item .a{font-size:12px;color:var(--muted-2);margin-top:4px;line-height:1.5;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+  /* 评论 */
+  .comments{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px}
+  .comments h2{font-size:15px;margin:0 0 10px;font-weight:600}
+  .comments h2 i{font-style:normal;color:var(--muted-2);font-weight:400;font-size:13px;margin-left:6px}
+  .cm{display:flex;gap:8px;padding:8px 0;border-top:1px solid rgba(24,28,42,.08);font-size:13px;line-height:1.6}
+  .cm:first-of-type{border-top:0}
+  .cm .u{color:var(--blue);flex:0 0 auto;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cm .c{color:#2b2e37;word-break:break-word}
+  .cm .l{color:var(--muted-2);font-size:12px;margin-left:auto;flex:0 0 auto}
+  .cm-loading{color:var(--muted-2);font-size:13px;padding:6px 0}
+
+  /* 空态/加载 */
+  .empty{border:1px solid var(--line);border-radius:8px;padding:34px 20px;text-align:center;background:var(--panel)}
+  .empty h3{margin:0 0 6px;font-size:16px;font-weight:600}
+  .empty p{margin:0;color:var(--muted);font-size:13px;line-height:1.7}
+  .empty .grid{margin-top:16px;text-align:left}
+  .loading{display:flex;align-items:center;gap:10px;color:var(--muted);padding:20px 4px;font-size:13px}
+  .spin{width:14px;height:14px;border:2px solid rgba(24,28,42,.16);border-top-color:var(--pink);border-radius:50%;
+    animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* 原话证据 */
+  .evidence{margin-top:14px}
+  .evidence h3{font-size:12px;color:var(--muted);font-weight:500;margin:0 0 6px;letter-spacing:.4px}
+  .segs{max-height:168px;overflow:auto;border:1px solid var(--line);border-radius:6px;background:rgba(255,255,255,.9)}
+  .seg{
+    display:flex;gap:10px;width:100%;text-align:left;padding:6px 10px;font-size:13px;
+    color:#3a3f4c;border-bottom:1px solid rgba(24,28,42,.07);
+  }
+  .seg:last-child{border-bottom:0}
+  .seg:hover{background:rgba(251,114,153,.12);color:#1b1d24}
+  .seg .t{color:var(--muted-2);font-variant-numeric:tabular-nums;flex:0 0 auto}
+  .seg.on{background:rgba(251,114,153,.18);color:#1b1d24}
+
+  /* 骨架屏 */
+  .skeleton{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:18px}
+  @media(max-width:900px){.skeleton{grid-template-columns:minmax(0,1fr)}}
+  .sk{background:linear-gradient(90deg,rgba(255,255,255,.55) 25%,rgba(235,239,248,.95) 37%,rgba(255,255,255,.55) 63%);
+    background-size:400% 100%;animation:shimmer 1.4s ease infinite;border-radius:6px}
+  .sk.video{aspect-ratio:9/16;max-width:380px;width:100%}
+  .sk.line{height:14px;margin-bottom:10px}
+  .sk.line.w60{width:60%}.sk.line.w40{width:40%}.sk.line.w80{width:80%}
+  @keyframes shimmer{0%{background-position:100% 0}100%{background-position:0 0}}
+  @media (prefers-reduced-motion: reduce){.sk{animation:none}}
+
+  footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);
+    color:var(--muted-2);font-size:12px;line-height:1.9}
+  footer p{margin:0 0 4px}
+  footer b{color:var(--muted);font-weight:400}
+
+  @media (prefers-reduced-motion: reduce){.spin{animation:none}}
+  @media (max-width:520px){
+    .ask-row{flex-direction:column}
+    #go{padding:10px}
+    .topbar nav{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="bg-aurora" aria-hidden="true"></div>
+<div class="bg-grid" aria-hidden="true"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<div class="mascot" id="mascot" aria-hidden="true">
+  <div class="bubble" id="bubble">问吧，世间万物我都替峰哥翻过。</div>
+  <img class="mascot-img" id="mascot-img" src="/assets/fengge-chibi.png" alt="">
+</div>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <div class="logo"><b>峰</b>峰哥解答世间万物 <span>/ 直播切片检索</span></div>
+    <nav>
+      <a href="#" id="navAsk">提问</a>
+      <a href="#" id="navBrowse">按话题翻</a>
+    </nav>
+    <div class="stat" id="stat">索引 1099 段</div>
+  </div>
+</div>
+
+<div class="wrap">
+  <section class="ask">
+    <div class="ask-head">
+      <span class="tag pink">B友提问</span>
+      <span class="tag">连麦中</span>
+      <span class="tag" id="mode-hint">Enter 发送</span>
+    </div>
+    <div class="ask-row">
+      <textarea id="q" rows="1" placeholder="问点什么。比如：我在深圳送外卖，25 岁还有救吗"></textarea>
+      <button id="go" type="button">提问</button>
+    </div>
+    <div class="ask-foot">
+      <span>改写后比对 <b id="n2">1099</b> 段</span>
+      <span>没有就直说</span>
+    </div>
+  </section>
+
+  <div class="channels" id="channels"></div>
+
+  <div id="result"></div>
+
+  <footer class="legal">
+    <p>
+      视频与直播内容版权归 B 站 UP 主「卡秃噜皮君」及主播「峰哥亡命天涯」所有。本项目仅用于检索与学习研究，
+      不对内容主张任何权利，不二次分发、不用于商业用途。
+    </p>
+    <p>
+      索引与文字由程序自动生成，可能存在误差，以原视频为准。如有侵权，请联系删除。
+    </p>
+    <p>
+      看板娘由开源项目 live2d-widget（MIT，© stevenjoezhang）与 Live2D Cubism SDK 驱动；
+      示例模型版权归 Live2D Inc. 所有，仅用于技术演示。
+    </p>
+  </footer>
+</div>
+
+<script>
+const PRESETS = [
+  "我在深圳送外卖，25 岁还有救吗",
+  "家里让我回小城市考编，我想去大城市闯",
+  "读研到底值不值",
+  "工资不高又想存钱，有必要搞副业吗",
+  "喜欢一个人但对方一直不表态"
+];
+const $ = id => document.getElementById(id);
+const state = { index: null, mode: "ask", q: "" };
+
+function esc(s){
+  return String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmt(sec){
+  sec = Math.max(0, Math.floor(sec || 0));
+  return Math.floor(sec/60) + ":" + String(sec % 60).padStart(2, "0");
+}
+function go(url){ history.pushState(null, "", url); }
+
+/* ---------- 提问 ---------- */
+async function ask(text){
+  const question = (text ?? $("q").value).trim();
+  if (!question) return;
+  $("q").value = question;
+  state.q = question;
+  state.mode = "ask";
+  $("go").disabled = true;
+  const STEPS = [
+    "峰哥正在建立链接中…",
+    "峰哥正在深度思考…",
+    "峰哥正在翻阅直播录像…",
+    "峰哥正在核对原话…"
+  ];
+  let step = 0;
+  busyBubble(true, "峰哥正在建立链接中…");
+  $("result").innerHTML = `
+    <div class="skeleton">
+      <div class="sk video"></div>
+      <div>
+        <div class="sk line w40"></div>
+        <div class="sk line w80"></div>
+        <div class="sk line w60"></div>
+        <div class="sk line"></div>
+        <div class="sk line w80"></div>
+      </div>
+    </div>
+    <div class="loading" style="padding:14px 2px"><span class="spin"></span><span id="loading-text">${STEPS[0]}</span></div>`;
+  const timer = setInterval(() => {
+    step = (step + 1) % STEPS.length;
+    const el = $("loading-text");
+    if (el) el.textContent = STEPS[step];
+    busyBubble(true, STEPS[step]);
+  }, 1100);
+  try{
+    const resp = await fetch("/api/ask", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ question })
+    });
+    if (!resp.ok) throw new Error("接口 " + resp.status);
+    render(await resp.json(), question);
+    go("?q=" + encodeURIComponent(question));
+  }catch(err){
+    $("result").innerHTML = `<div class="empty"><h3>出错了</h3><p>${esc(err.message)}</p></div>`;
+  }finally{
+    clearInterval(timer);
+    $("go").disabled = false;
+  }
+}
+
+function render(data, asked){
+  const best = data.best;
+  if (!best){
+    $("result").innerHTML = `<div class="empty"><h3>索引还没建好</h3><p>先跑一次 pipeline 生成 dataset/clips.jsonl</p></div>`;
+    return;
+  }
+  if (!data.found){
+    busyBubble(false, "这个他真没聊过，换个问法试试？");
+    playMotion("Sad", 6, 3);
+    const alts = (data.results || []).filter(x => x.score > 0.42).slice(0, 6);
+    $("result").innerHTML = `
+      <div class="empty">
+        <h3>这个峰哥没聊过</h3>
+        <p>最接近的只有 <span class="score">${best.score.toFixed(2)}</span>，低于 ${data.threshold} 的判定线。
+           ${data.abstracted && data.abstracted !== asked ? `<br>我把它理解成「${esc(data.abstracted)}」。` : ""}
+           <br>换个问法，或者看看他聊过这些：</p>
+        ${alts.length ? `<div class="grid">${alts.map(a => card(a)).join("")}</div>` : ""}
+      </div>`;
+    bindCards(data.results);
+    return;
+  }
+
+  const verdict = data.verdict || {};
+  const label = verdict.verdict === "answers" ? "对得上" : verdict.verdict === "partial" ? "沾边" : "";
+  busyBubble(false, verdict.verdict === "answers" ? "这段就是正面回答。" : "沾边，先听听。");
+  // 有正面答案就笑一下，只沾边就歪头装傻
+  playMotion(verdict.verdict === "answers" ? "Smile" : "Shy", 6, 3);
+  const rest = (data.results || []).filter(x => x.id !== best.id).slice(0, 6);
+
+  $("result").innerHTML = `
+    <div class="cols">
+      <div>
+        <div class="player">
+          <video id="clip" controls playsinline preload="metadata"
+                 poster="/clips/${esc(best.source_bvid)}.jpg"
+                 src="${esc(best.clip_url)}"></video>
+          <div class="player-bar">
+            <span class="t" id="cut">本段 ${fmt(best.trim.start)} – ${fmt(best.trim.end)}</span>
+            <button type="button" id="replay">重看这段</button>
+          </div>
+        </div>
+      </div>
+      <div class="info">
+        <div class="info-top">
+          <span class="up"><span class="avatar">峰</span>卡秃噜皮君</span>
+          <span class="score">相似度 ${best.score.toFixed(2)}</span>
+          <span>${data.latency_ms} ms</span>
+          ${label ? `<span class="verdict">${label}</span>` : ""}
+        </div>
+        <h1>${esc(best.question)}</h1>
+        ${data.abstracted && data.abstracted !== asked
+          ? `<div class="abstract"><b>改写为</b>${esc(data.abstracted)}</div>` : ""}
+        <div class="answer">${esc(best.answer)}</div>
+        ${best.quote ? `<div class="quote">${esc(best.quote)}</div>` : ""}
+        ${segmentsBlock(best)}
+        <div class="rows">
+          <span>${esc(best.type || "")}${(best.tags || []).length ? " · " + (best.tags || []).slice(0,3).map(esc).join(" / ") : ""}</span>
+          <a href="${esc(best.source_url)}" target="_blank" rel="noreferrer">原视频 ${esc(best.source_bvid)} ↗</a>
+          <a href="#" id="copy">复制链接</a>
+        </div>
+        ${rest.length ? `<div class="divider"></div>
+          <div class="rel">${rest.map(a => `
+            <button type="button" data-id="${esc(a.id)}">
+              <img loading="lazy" src="/clips/${esc(a.source_bvid)}.jpg" alt="">
+              <span><span class="q">${esc(a.question)}</span>
+              <span class="s"><em>${a.score.toFixed(2)}</em> · ${esc(a.type || "")}</span></span>
+            </button>`).join("")}</div>` : ""}
+      </div>
+    </div>
+    <div class="comments" id="comments"><h2>B友怎么说<i>加载中…</i></h2></div>`;
+
+  bindCards(data.results, true);
+  bindSegments();
+  playClip(best);
+  $("replay").onclick = () => playClip(best);
+  $("copy").onclick = (e) => {
+    e.preventDefault();
+    navigator.clipboard?.writeText(location.origin + "/?q=" + encodeURIComponent(asked));
+    e.target.textContent = "已复制";
+  };
+  loadComments(best.source_bvid);
+}
+
+function card(a){
+  const bvid = a.source_bvid || a.bvid || "";
+  const cover = a.cover || (bvid ? `/clips/${bvid}.jpg` : "");
+  return `<button class="item" type="button" data-id="${esc(a.id)}">
+    <img loading="lazy" src="${esc(cover)}" alt="">
+    <span>
+      <span class="q">${esc(a.question)}</span>
+      <span class="a">${esc(a.answer || a.answer_summary || "")}</span>
+    </span>
+  </button>`;
+}
+
+function bindCards(results, asRel){
+  const list = results || [];
+  $("result").querySelectorAll("[data-id]").forEach(el => {
+    el.onclick = () => {
+      const hit = list.find(x => x.id === el.dataset.id);
+      if (!hit) return;
+      render({
+        found: true, abstracted: state.q, verdict: null, latency_ms: 0, threshold: 0.62,
+        best: hit, results: [hit, ...list.filter(x => x.id !== hit.id)]
+      }, state.q);
+    };
+  });
+}
+
+function segmentsBlock(best){
+  const segs = (best.segments || []).filter(s => (s.text || "").trim());
+  if (!segs.length) return "";
+  return `<div class="evidence">
+    <h3>原话（点一句跳到那）</h3>
+    <div class="segs">${segs.map(s => `
+      <button type="button" class="seg" data-t="${s.start}">
+        <span class="t">${fmt(s.start)}</span><span>${esc(s.text)}</span>
+      </button>`).join("")}</div>
+  </div>`;
+}
+
+function bindSegments(){
+  const v = $("clip");
+  if (!v) return;
+  $("result").querySelectorAll(".seg").forEach(btn => {
+    btn.onclick = () => {
+      $("result").querySelectorAll(".seg").forEach(b => b.classList.toggle("on", b === btn));
+      v.currentTime = Number(btn.dataset.t || 0);
+      v.play().catch(() => {});
+    };
+  });
+}
+
+function playClip(best){
+  const v = $("clip");
+  if (!v) return;
+  const start = Number(best.trim?.start || 0), end = Number(best.trim?.end || 0);
+  const seek = () => { try{ v.currentTime = start; }catch(e){} v.play().catch(()=>{}); };
+  if (v.readyState >= 1) seek(); else v.addEventListener("loadedmetadata", seek, {once:true});
+  v.ontimeupdate = () => { if (end > start && v.currentTime >= end){ v.pause(); v.currentTime = start; } };
+}
+
+async function loadComments(bvid){
+  const box = $("comments");
+  if (!box) return;
+  try{
+    const data = await (await fetch("/api/comments/" + bvid)).json();
+    if (!data.comments.length){
+      box.innerHTML = `<h2>B友怎么说<i>这条还没抓到评论</i></h2>`;
+      return;
+    }
+    box.innerHTML = `<h2>B友怎么说<i>${data.comments.length} 条热门</i></h2>` +
+      data.comments.slice(0, 8).map(c => `
+        <div class="cm">
+          <span class="u">${esc(c.user)}</span>
+          <span class="c">${esc(c.content)}</span>
+          <span class="l">${c.like} 赞</span>
+        </div>`).join("");
+  }catch(e){
+    box.innerHTML = `<h2>B友怎么说<i>拉取失败</i></h2>`;
+  }
+}
+
+/* ---------- 话题浏览 ---------- */
+async function loadChannels(){
+  try{
+    const data = await (await fetch("/api/topics")).json();
+    const box = $("channels");
+    box.innerHTML = `<button class="ch on" data-t="" type="button">全部提问</button>` +
+      data.topics.slice(0, 8).map(t =>
+        `<button class="ch" type="button" data-t="${esc(t.type)}">${esc(t.type)}<i>${t.count}</i></button>`
+      ).join("");
+    box.querySelectorAll(".ch").forEach(el => {
+      el.onclick = () => {
+        box.querySelectorAll(".ch").forEach(x => x.classList.toggle("on", x === el));
+        if (!el.dataset.t) return;
+        browse(el.dataset.t);
+      };
+    });
+  }catch(e){}
+}
+
+async function browse(type){
+  state.mode = "browse";
+  $("result").innerHTML = `<div class="loading"><span class="spin"></span>翻「${esc(type)}」…</div>`;
+  try{
+    const data = await (await fetch("/api/topics/" + encodeURIComponent(type))).json();
+    $("result").innerHTML = `
+      <div class="browse">
+        <h2>${esc(type)} · ${data.total} 段</h2>
+        <div class="grid">${data.items.map(card).join("")}</div>
+      </div>`;
+    bindCards(data.items);
+  }catch(e){
+    $("result").innerHTML = `<div class="empty"><h3>翻不动了</h3><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+/* ---------- 看板娘气泡 ---------- */
+const IDLE_LINES = [
+  "问吧，世间万物我都替峰哥翻过。",
+  "别客气，连麦又不要钱。",
+  "问得越具体，我翻得越准。"
+];
+let idleIndex = 0;
+function setBubble(text, sticky){
+  const el = $("bubble");
+  if (!el || !text) return;
+  el.textContent = text;
+  el.style.animation = "none";
+  void el.offsetWidth;
+  el.style.animation = "";
+  if (!sticky) clearTimeout(setBubble._t);
+}
+setInterval(() => {
+  if (document.hidden) return;
+  const el = $("bubble");
+  if (!el || el.dataset.busy === "1") return;
+  idleIndex = (idleIndex + 1) % IDLE_LINES.length;
+  el.textContent = IDLE_LINES[idleIndex];
+}, 9000);
+
+/* 懒加载动作：第一次调用只触发加载并返回 false，重试到真正播放为止 */
+function playMotion(group, tries, priority){
+  const m = window.__l2dModel;
+  if (!m || !m.motion) return;
+  let n = 0, max = tries || 6;
+  const tick = () => {
+    let p;
+    try { p = m.motion(group, undefined, priority); } catch (e) { return; }
+    if (p && p.then) {
+      p.then(ok => { if (ok === false && ++n < max) setTimeout(tick, 150); }).catch(() => {});
+    }
+  };
+  tick();
+}
+
+function busyBubble(on, text){
+  const el = $("bubble");
+  if (!el) return;
+  el.dataset.busy = on ? "1" : "0";
+  if (text) el.textContent = text;
+  // 说话时切到 Talk 动作，停下来回待机（没这个动作的模型静默忽略）
+  playMotion(on ? "Talk" : "Idle", 6, on ? 3 : undefined);
+}
+
+/* ---------- 粒子背景 ---------- */
+(function particles(){
+  const canvas = document.getElementById("fx");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let w = 0, h = 0, dots = [];
+  const COLORS = ["251,114,153", "64,170,255", "255,178,60"];
+
+  function resize(){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = canvas.clientWidth; h = canvas.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const count = Math.min(90, Math.round(w * h / 22000));
+    dots = Array.from({ length: count }, () => ({
+      x: Math.random() * w, y: Math.random() * h,
+      r: 0.8 + Math.random() * 2.2,
+      vx: (Math.random() - 0.5) * 0.18,
+      vy: -0.05 - Math.random() * 0.22,
+      a: 0.25 + Math.random() * 0.45,
+      c: COLORS[Math.floor(Math.random() * COLORS.length)]
+    }));
+  }
+
+  function frame(){
+    ctx.clearRect(0, 0, w, h);
+    for (const d of dots){
+      d.x += d.vx; d.y += d.vy;
+      if (d.y < -10){ d.y = h + 10; d.x = Math.random() * w; }
+      if (d.x < -10) d.x = w + 10;
+      if (d.x > w + 10) d.x = -10;
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(${d.c},${d.a})`;
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+  if (!reduce) requestAnimationFrame(frame);
+  else {
+    ctx.clearRect(0, 0, w, h);
+    for (const d of dots){
+      ctx.beginPath(); ctx.fillStyle = `rgba(${d.c},${d.a})`;
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+})();
+
+/* ---------- 启动 ---------- */
+$("go").onclick = () => ask();
+$("q").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing){ e.preventDefault(); ask(); }
+});
+$("q").addEventListener("input", () => {
+  $("q").style.height = "auto";
+  $("q").style.height = Math.min($("q").scrollHeight, 140) + "px";
+});
+$("navBrowse").onclick = (e) => { e.preventDefault(); loadChannels(); browse("情感两性"); };
+$("navAsk").onclick = (e) => { e.preventDefault(); $("q").focus(); };
+
+fetch("/api/health").then(r => r.json()).then(h => {
+  if (!h.records) return;
+  $("stat").textContent = `索引 ${h.records} 段`;
+  $("n2").textContent = h.records;
+}).catch(()=>{});
+loadChannels();
+
+const initial = new URLSearchParams(location.search).get("q");
+if (initial) ask(initial);
+else $("q").focus();
+</script>
+
+<script>
+(async function initMascot(){
+  const params = new URLSearchParams(location.search);
+  const img = document.getElementById("mascot-img");
+
+  let models = [];
+  try {
+    models = (await (await fetch("/api/live2d/models")).json()).models || [];
+  } catch (e) { /* 没装模型就退回静态图 */ }
+
+  const STATIC = "chibi";
+  const order = [...models.map(m => m.name), STATIC];
+  const pick = params.get("m") || order[0];
+  const model = models.find(m => m.name === pick);
+
+  // 切换按钮
+  const btn = document.createElement("button");
+  btn.id = "l2d-switch";
+  btn.type = "button";
+  btn.textContent = "换一个";
+  btn.title = "当前：" + pick;
+  btn.onclick = () => {
+    const next = order[(order.indexOf(pick) + 1) % order.length];
+    const url = new URL(location.href);
+    url.searchParams.set("m", next);
+    location.href = url.toString();
+  };
+  if (order.length > 1) document.body.appendChild(btn);
+
+  if (!model) {
+    // chibi 或没有可用模型：只显示静态图
+    return;
+  }
+
+  if (img) img.remove();
+  document.body.classList.add("l2d");
+
+  const loadScript = (src) => new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = src + "?v=4";            // 换版本时递增，避免浏览器吃旧缓存
+    s.onload = res;
+    s.onerror = () => rej(new Error("加载失败：" + src));
+    document.body.appendChild(s);
+  });
+
+  // Cubism 2（.model.json + .moc）：沿用 L2Dwidget
+  if (!/\.model3\.json$/i.test(model.json)) {
+    const tag = document.createElement("script");
+    tag.src = "/vendor/live2d/L2Dwidget.min.js";
+    tag.onload = () => {
+      window.L2Dwidget.init({
+        model: { jsonPath: model.json },
+        display: { position: "right", width: 170, height: 260, hOffset: 0, vOffset: 0 },
+        mobile: { show: false, scale: 0.5 },
+        react: { opacityDefault: 1, opacityOnHover: 1 },
+        dialog: false,
+        log: false
+      });
+    };
+    document.body.appendChild(tag);
+    return;
+  }
+
+  // Cubism 3/4（.model3.json + .moc3）：pixi + cubism core + pixi-live2d-display
+  try {
+    document.body.classList.add("cubism4");
+    await loadScript("/vendor/live2d/cubism/pixi.min.js");
+    await loadScript("/vendor/live2d/cubism/live2dcubismcore.min.js");
+    await loadScript("/vendor/live2d/cubism/pixi-live2d-display.min.js");
+
+    const W = 186, H = 196;
+    const canvas = document.createElement("canvas");
+    canvas.id = "live2d-cubism";
+    document.body.appendChild(canvas);
+
+    const app = new PIXI.Application({
+      view: canvas, backgroundAlpha: 0, antialias: true,
+      width: W, height: H,
+      resolution: Math.min(window.devicePixelRatio || 1, 2),
+      autoStart: true,
+      sharedTicker: true        // Live2DModel 的 autoUpdate 挂在 PIXI.Ticker.shared 上
+    });
+    PIXI.Ticker.shared.start();
+    const m = await PIXI.live2d.Live2DModel.from(model.json, {
+      autoInteract: true,
+      motionPreload: PIXI.live2d.MotionPreloadStrategy.ALL
+    });
+    app.stage.addChild(m);
+    m.anchor.set(0.5, 1);                       // 底部中心对齐画布底部
+    const s = Math.min(W / m.internalModel.width, H / m.internalModel.height);
+    m.scale.set(s);
+    m.position.set(W / 2, H);
+    // 待机动作 + 眨眼由库自己循环；这里先踢一脚，避免首帧静止
+    playMotion("Idle");
+    // 头是刚性整体旋转，转头幅度太大时下巴会和脖子分家（露出衬衫）。
+    // 库里的 updateFocus 写死了 30°，这里把 focus 缩到 0.4 → 实际只转 ±12°。
+    const im = m.internalModel;
+    const origFocus = im.updateFocus.bind(im);
+    im.updateFocus = function () {
+      const f = this.focusController;
+      const ox = f.x, oy = f.y;
+      f.x = ox * 0.4; f.y = oy * 0.4;
+      try { origFocus(); } finally { f.x = ox; f.y = oy; }
+    };
+    // 库自带的 autoUpdate 挂在 PIXI.Ticker.shared 上，和 app.ticker 不是同一个，
+    // 实测不推进动画；改成自己用 app.ticker 驱动。
+    // 注意单位：Live2DModel.update() 累加的是**毫秒**，内部 _render 再 /1000 转秒；
+    // 传秒进去会让内部时钟慢 1000 倍，模型看起来完全静止。
+    m.autoUpdate = false;
+    let lastTick = performance.now();
+    app.ticker.add(() => {
+      lastTick = performance.now();
+      try { m.update(app.ticker.deltaMS); } catch (e) {}
+    });
+    // 兜底：窗口被遮挡时浏览器会把 rAF 降到 ~1fps，看板娘会一顿一顿的。
+    // ticker 超过 250ms 没动就自己补帧，保证任何情况下都在动。
+    setInterval(() => {
+      if (document.hidden) { lastTick = performance.now(); return; }
+      const now = performance.now();
+      if (now - lastTick < 250) return;
+      const dt = Math.min(now - lastTick, 120);
+      lastTick = now;
+      try { m.update(dt); app.render(); } catch (e) {}
+    }, 66);
+    // 从后台切回来时重新踢一下待机动作（长时间挂起后动作可能已结束）
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) { lastTick = performance.now(); playMotion("Idle"); }
+    });
+    // 其余动作按需懒加载，提前预热一遍，切动作时不会卡第一下
+    setTimeout(() => ["Talk", "Smile", "Angry", "Sad", "Surprise"].forEach(g => playMotion(g, 1)), 1200);
+    window.__l2dModel = m;                      // 方便控制台调试
+    window.__l2dApp = app;
+  } catch (e) {
+    if (window.console) console.warn("[live2d]", e);
+    const c = document.getElementById("live2d-cubism");
+    if (c) c.remove();
+    document.body.classList.remove("l2d");
+    document.body.classList.remove("cubism4");
+  }
+})();
+</script>
+</body>
+</html>

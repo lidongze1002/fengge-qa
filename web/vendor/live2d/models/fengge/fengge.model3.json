@@ -1,0 +1,184 @@
+{
+  "Version": 3,
+  "FileReferences": {
+    "Moc": "fengge.moc3",
+    "Textures": [
+      "textures/000_tex_00_clothing.png",
+      "textures/001_tex_01_leg_l.png",
+      "textures/002_tex_02_leg_r.png",
+      "textures/003_tex_03_arm_r_up.png",
+      "textures/004_tex_03_arm_r_lo.png",
+      "textures/005_tex_04_arm_l_up.png",
+      "textures/006_tex_04_arm_l_lo.png",
+      "textures/007_tex_05_clothing.png",
+      "textures/008_tex_06_ear_l.png",
+      "textures/009_tex_06_ear_r.png",
+      "textures/010_tex_07_face_base.png",
+      "textures/011_tex_08_blush_l.png",
+      "textures/012_tex_08_blush_r.png",
+      "textures/013_tex_08_mouth.png",
+      "textures/014_tex_09_nose.png",
+      "textures/015_tex_10_eye_white_l.png",
+      "textures/016_tex_11_eye_white_r.png",
+      "textures/017_tex_12_pupil_l.png",
+      "textures/018_tex_13_pupil_r.png",
+      "textures/019_tex_16_eye_l.png",
+      "textures/020_tex_16_eye_closed_l.png",
+      "textures/021_tex_17_eye_r.png",
+      "textures/022_tex_17_eye_closed_r.png",
+      "textures/023_tex_18_hair_front.png",
+      "textures/024_tex_14_eyebrow_l.png",
+      "textures/025_tex_15_eyebrow_r.png"
+    ],
+    "Physics": "fengge.physics3.json",
+    "DisplayInfo": "fengge.cdi3.json",
+    "Motions": {
+      "Idle": [
+        {
+          "File": "fengge.idle.motion3.json"
+        }
+      ],
+      "Smile": [
+        {
+          "File": "fengge.smile.motion3.json"
+        },
+        {
+          "File": "fengge.smile.motion3.json"
+        }
+      ],
+      "Surprise": [
+        {
+          "File": "fengge.surprise.motion3.json"
+        }
+      ],
+      "Sad": [
+        {
+          "File": "fengge.sad.motion3.json"
+        }
+      ],
+      "Angry": [
+        {
+          "File": "fengge.angry.motion3.json"
+        }
+      ],
+      "Shy": [
+        {
+          "File": "fengge.shy.motion3.json"
+        }
+      ],
+      "Head_yaw": [
+        {
+          "File": "fengge.head_yaw.motion3.json"
+        }
+      ],
+      "Head_pitch": [
+        {
+          "File": "fengge.head_pitch.motion3.json"
+        }
+      ],
+      "Head_roll": [
+        {
+          "File": "fengge.head_roll.motion3.json"
+        }
+      ],
+      "Head_shake": [
+        {
+          "File": "fengge.head_shake.motion3.json"
+        }
+      ],
+      "Body_sway": [
+        {
+          "File": "fengge.body_sway.motion3.json"
+        }
+      ],
+      "Body_bow": [
+        {
+          "File": "fengge.body_bow.motion3.json"
+        }
+      ],
+      "Arms_raise": [
+        {
+          "File": "fengge.arms_raise.motion3.json"
+        }
+      ],
+      "Arms_swing": [
+        {
+          "File": "fengge.arms_swing.motion3.json"
+        }
+      ],
+      "Legs_swing": [
+        {
+          "File": "fengge.legs_swing.motion3.json"
+        }
+      ],
+      "Legs_sway": [
+        {
+          "File": "fengge.legs_sway.motion3.json"
+        }
+      ],
+      "Talk": [
+        {
+          "File": "fengge.talk.motion3.json"
+        }
+      ],
+      "Smirk": [
+        {
+          "File": "fengge.smirk.motion3.json"
+        }
+      ],
+      "Cheek": [
+        {
+          "File": "fengge.cheek.motion3.json"
+        }
+      ],
+      "Look": [
+        {
+          "File": "fengge.look.motion3.json"
+        }
+      ],
+      "Blink": [
+        {
+          "File": "fengge.blink.motion3.json"
+        }
+      ],
+      "Brows": [
+        {
+          "File": "fengge.brows.motion3.json"
+        }
+      ],
+      "Brow_form": [
+        {
+          "File": "fengge.brow_form.motion3.json"
+        }
+      ],
+      "Sweep": [
+        {
+          "File": "fengge.sweep.motion3.json"
+        }
+      ]
+    }
+  },
+  "Groups": [
+    {
+      "Target": "Parameter",
+      "Name": "EyeBlink",
+      "Ids": [
+        "ParamEyeLOpen",
+        "ParamEyeROpen"
+      ]
+    },
+    {
+      "Target": "Parameter",
+      "Name": "LipSync",
+      "Ids": [
+        "ParamMouthOpenY"
+      ]
+    }
+  ],
+  "HitAreas": [
+    {
+      "Id": "07_face_base",
+      "Name": "Head"
+    }
+  ]
+}

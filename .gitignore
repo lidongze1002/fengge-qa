@@ -1,0 +1,22 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+cookies.txt
+.qr/
+data/
+dataset/
+logs/
+.superpowers/
+/models/
+live2d-build/
+dist/
+
+# vendor: keep only the fengge model + render libs.
+web/vendor/live2d/models/haru/
+web/vendor/live2d/models/haru2/
+web/vendor/live2d/models/koharu/
+web/vendor/live2d/models/shizuku/
+web/vendor/live2d/_backup/
+web/vendor/live2d/L2Dwidget.min.js
+web/vendor/live2d/L2Dwidget.0.min.js
