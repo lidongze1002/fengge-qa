@@ -14,7 +14,7 @@
   *{box-sizing:border-box}
   html{background:#f5f6f8}
   body{
-    margin:0;color:var(--text);
+    margin:0;color:var(--text);min-height:100vh;display:flex;flex-direction:column;
     font:14px/1.6 "PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
     -webkit-font-smoothing:antialiased;
   }
@@ -26,7 +26,8 @@
       radial-gradient(46% 46% at 50% 96%, rgba(255,196,120,.22), transparent 70%);
     filter:blur(8px);
   }
-  .wrap{max-width:1080px;margin:0 auto;padding:56px 20px 140px}
+  .wrap{max-width:1080px;margin:0 auto;padding:56px 20px 140px;flex:1;width:100%;
+    display:flex;flex-direction:column}
   header h1{
     font-size:clamp(24px,4vw,34px);margin:0 0 10px;letter-spacing:-.5px;
     background:linear-gradient(96deg,#1f2329 30%,#e8658d 70%,#2f9fd0);
@@ -77,8 +78,16 @@
   .player-head b{color:var(--text);font-weight:600;min-width:0;overflow:hidden;
     text-overflow:ellipsis;white-space:nowrap}
   .player-head a{margin-left:auto;color:var(--blue);text-decoration:none;font-size:12.5px;white-space:nowrap}
-  .player-box{position:relative;width:100%;padding-top:56.25%;background:#0b0d12}
+  .player-box{position:relative;width:100%;padding-top:56.25%;background:#0b0d12;
+    background-size:cover;background-position:center}
   .player-box iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .player-box.shot iframe{display:none}
+  .player-box.shot::after{
+    content:"▶  B 站播放器（截图占位）";position:absolute;inset:0;
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:15px;letter-spacing:.5px;
+    background:rgba(10,12,18,.34);text-shadow:0 2px 8px rgba(0,0,0,.6);
+  }
   .card{
     display:flex;gap:14px;padding:14px;border-radius:16px;margin-bottom:12px;
     border:1px solid rgba(255,255,255,.9);background:var(--panel);
@@ -104,7 +113,7 @@
   }
   .card a:hover{filter:brightness(1.06)}
   footer{
-    margin-top:44px;padding-top:18px;border-top:1px solid var(--line);
+    margin-top:auto;padding-top:18px;border-top:1px solid var(--line);
     color:var(--muted-2);font-size:12px;line-height:1.8;
   }
   footer a{color:var(--muted)}
@@ -162,7 +171,9 @@ const PRESETS = [
   "缺钱的时候该怎么办"
 ];
 
-const state = { docs: [], postings: null, df: null, dl: 0, avgdl: 0 };
+const state = { docs: [], postings: null, df: null, dl: 0, avgdl: 0, last: [] };
+const SHOT = new URLSearchParams(location.search).has("shot");
+const MIN_COVERAGE = 0.34;   // 命中查询词的比例低于这个就判「没聊过」
 
 function bigrams(s) {
   const t = (s || "").toLowerCase().replace(/[^\u4e00-\u9fa5a-z0-9]+/g, "");
@@ -194,10 +205,11 @@ function buildIndex(docs) {
 }
 
 function search(query, topK = 12) {
-  const grams = bigrams(query);
+  const grams = [...new Set(bigrams(query))];
   if (!grams.length) return [];
   const k1 = 1.4, b = 0.72;
   const scores = new Map();
+  const hits = new Map();          // docIdx -> 命中的不同 bigram 集合
   for (const g of grams) {
     const list = state.postings[g];
     if (!list) continue;
@@ -207,12 +219,15 @@ function search(query, topK = 12) {
       const tf = 1;
       const s = idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * d._len / state.avgdl));
       scores.set(i, (scores.get(i) || 0) + s);
+      let set = hits.get(i);
+      if (!set) { set = new Set(); hits.set(i, set); }
+      set.add(g);
     }
   }
   return [...scores.entries()]
     .sort((a, b2) => b2[1] - a[1])
     .slice(0, topK)
-    .map(([i, s]) => ({ ...state.docs[i], _score: s }));
+    .map(([i, s]) => ({ ...state.docs[i], _score: s, _cov: hits.get(i).size / grams.length }));
 }
 
 function esc(s) {
@@ -256,6 +271,14 @@ function playInline(d) {
   document.getElementById("ptime").textContent = "· " + fmtTime(d.t);
   document.getElementById("plink").href =
     `https://www.bilibili.com/video/${encodeURIComponent(d.b)}?t=${Math.round(d.t || 0)}`;
+  // 播放器没加载出来时，底下垫着封面，不至于是一块黑
+  document.querySelector(".player-box").style.backgroundImage =
+    `url("thumbs/${encodeURIComponent(d.id)}.jpg")`;
+  document.querySelector(".player-box").classList.toggle("shot", SHOT);
+  if (SHOT) {
+    document.getElementById("pframe").removeAttribute("src");
+    return;
+  }
   document.getElementById("pframe").src =
     `https://player.bilibili.com/player.html?bvid=${encodeURIComponent(d.b)}` +
     `&page=1&t=${Math.round(d.t || 0)}&autoplay=0&danmaku=0&high_quality=1`;
@@ -266,7 +289,7 @@ function render(list, query) {
   state.last = list;
   if (!list.length) {
     document.getElementById("player").hidden = true;
-    out.innerHTML = `<div class="empty">这个峰哥没聊过，或者换个问法试试。</div>`;
+    out.innerHTML = `<div class="empty">没搜到，换个问法试试。</div>`;
     return;
   }
   out.innerHTML = list.map((d, i) => card(d, i)).join("");

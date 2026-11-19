@@ -28,6 +28,7 @@ OUT = Path(r"D:\fengge-rag\live2d-build\fix-out")
 OUT.mkdir(parents=True, exist_ok=True)
 
 SCALE = 0.85      # 整体缩小，给脖子腾出上下空间
+HEAD_SCALE = 0.90 # 头部再缩一圈（以下巴为轴心，不影响脖子长度）
 HEAD_UP = 0      # 头部（脸/五官/头发/耳朵）上移
 BODY_DOWN = 50    # 身体（西装/手臂/腿/鞋）下移
 
@@ -85,6 +86,29 @@ def main() -> int:
         elif name in BODY_PARTS:
             dy += BODY_DOWN
         moved[name] = scaled(img, xy, dx, dy)
+
+    # ---- 头部再缩一圈：以下巴为轴心等比缩小，脖子长度不受影响
+    if HEAD_SCALE != 1.0:
+        fimg, (fx0, fy0) = moved["face"]
+        a = fimg.split()[-1]
+        fw0, fh0 = fimg.size
+        chin0 = fy0 + fh0 - 1
+        for y in range(fh0 - 1, -1, -1):
+            if max(a.getpixel((x, y)) for x in range(0, fw0, 3)) > 40:
+                chin0 = fy0 + y
+                break
+        pivot_x = round(512 * SCALE + base_dx)
+        pivot_y = chin0
+        for name in HEAD_PARTS:
+            if name not in moved:
+                continue
+            img, xy = moved[name]
+            nw = max(1, round(img.size[0] * HEAD_SCALE))
+            nh = max(1, round(img.size[1] * HEAD_SCALE))
+            img2 = img.resize((nw, nh), Image.LANCZOS)
+            nx = round(pivot_x + (xy[0] - pivot_x) * HEAD_SCALE)
+            ny = round(pivot_y + (xy[1] - pivot_y) * HEAD_SCALE)
+            moved[name] = (img2, (nx, ny))
 
     topwear, (twx, twy) = moved["topwear"]
     face, (fx, fy) = moved["face"]
